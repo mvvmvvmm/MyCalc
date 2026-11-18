@@ -6,7 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -15,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mycalc.ui.theme.MyCalcTheme
@@ -30,7 +31,7 @@ class MainActivity : ComponentActivity() {
             MyCalcTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFFF2F7FF) // Пастельно-голубой фон
+                    color = Color(0xFFF2F7FF)
                 ) {
                     Scaffold(
                         containerColor = Color.Transparent,
@@ -45,10 +46,18 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Calculator(modifier: Modifier = Modifier) {
-    // rememberSaveable сохраняет состояние при смене ориентации
     var display by rememberSaveable { mutableStateOf("0") }
     var expression by rememberSaveable { mutableStateOf("") }
     var currentOperation by rememberSaveable { mutableStateOf("") }
+
+    // Состояние для вертикального скролла
+    val scrollState = rememberScrollState()
+
+    // Автоматическая прокрутка вниз при вводе
+    LaunchedEffect(display, expression, currentOperation) {
+        kotlinx.coroutines.delay(50)
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
 
     fun onInput(char: String) {
         if (display == "0" && char != ".") {
@@ -122,66 +131,63 @@ fun Calculator(modifier: Modifier = Modifier) {
             .padding(16.dp),
         verticalArrangement = Arrangement.Bottom
     ) {
-        // --- ЗОНА ДИСПЛЕЯ ---
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .background(Color.White, RoundedCornerShape(24.dp))
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.End
+                .padding(16.dp)
         ) {
-            // 1. Предыдущее выражение (маленький серый шрифт)
-            Text(
-                text = expression,
-                color = Color.Gray,
-                fontSize = 20.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // Включаем вертикальный скролл и прижимаем контент к низу
+                    .verticalScroll(scrollState, reverseScrolling = true),
+                verticalArrangement = Arrangement.Bottom,
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = expression,
+                    color = Color.Gray,
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = currentOperation,
+                    color = Color(0xFF9BC1E8),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
 
-            // 2. Текущая операция (голубой шрифт)
-            Text(
-                text = currentOperation,
-                color = Color(0xFF9BC1E8),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.End
-            )
+                val fontSize = when {
+                    display.length > 15 -> 20.sp
+                    display.length > 12 -> 24.sp
+                    display.length > 9 -> 32.sp
+                    display.length > 6 -> 44.sp
+                    else -> 56.sp
+                }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 3. Текущее число (крупный шрифт с авто-уменьшением)
-            val fontSize = when {
-                display.length > 15 -> 20.sp
-                display.length > 12 -> 24.sp
-                display.length > 9 -> 32.sp
-                display.length > 6 -> 44.sp
-                else -> 56.sp
+                Text(
+                    text = display,
+                    color = Color(0xFF2C3E50),
+                    fontSize = fontSize,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-
-            Text(
-                text = display,
-                color = Color(0xFF2C3E50),
-                fontSize = fontSize,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                textAlign = TextAlign.End,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- ЗОНА КЛАВИАТУРЫ ---
-
-        // Ряд 1: Научные функции
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -194,7 +200,6 @@ fun Calculator(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Ряд 2: Корень, Квадрат, Очистка, Стереть
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -207,7 +212,6 @@ fun Calculator(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Ряд 3: 7, 8, 9, ÷
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -220,7 +224,6 @@ fun Calculator(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Ряд 4: 4, 5, 6, ×
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -233,7 +236,6 @@ fun Calculator(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Ряд 5: 1, 2, 3, −
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -246,7 +248,6 @@ fun Calculator(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Ряд 6: 0, ., =
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -264,22 +265,21 @@ fun Calculator(modifier: Modifier = Modifier) {
 fun CalcButton(
     text: String,
     modifier: Modifier = Modifier,
-    isOp: Boolean = false,    // Операции
-    isSci: Boolean = false,   // Научные функции
-    isAction: Boolean = false,// Действия (AC, Backspace)
+    isOp: Boolean = false,
+    isSci: Boolean = false,
+    isAction: Boolean = false,
     onClick: () -> Unit
 ) {
-    // Цветовая палитра по ТЗ (белый и пастельно-голубой)
     val containerColor = when {
-        isOp -> Color(0xFF9BC1E8)      // Пастельно-голубой для операций
-        isSci -> Color(0xFFE3F2FD)     // Светло-голубой для науки
-        isAction -> Color(0xFFFFE0E0)  // Бледно-красный для очистки
-        else -> Color.White            // Белый для цифр
+        isOp -> Color(0xFF9BC1E8)
+        isSci -> Color(0xFFE3F2FD)
+        isAction -> Color(0xFFFFE0E0)
+        else -> Color.White
     }
 
     val contentColor = when {
         isOp -> Color.White
-        else -> Color(0xFF2C3E50)      // Темно-серый/синий текст
+        else -> Color(0xFF2C3E50)
     }
 
     Button(
@@ -300,7 +300,6 @@ fun CalcButton(
     }
 }
 
-// --- МАТЕМАТИЧЕСКИЙ ДВИЖОК (Приоритет операций) ---
 fun evaluateExpression(expression: String): Double {
     val tokens = expression.replace(" ", "")
         .replace("×", "*")
@@ -359,15 +358,12 @@ fun evaluateExpression(expression: String): Double {
     return if (values.isNotEmpty()) values[0] else 0.0
 }
 
-// --- ФОРМАТИРОВАНИЕ РЕЗУЛЬТАТА ---
 fun formatResult(value: Double): String {
     if (value.isNaN()) return "Ошибка"
     if (value.isInfinite()) return "∞"
 
     return try {
-        // Используем BigDecimal для избежания экспоненциальной записи (E) у больших чисел
         val bd = BigDecimal(value.toString()).stripTrailingZeros()
-        // Ограничиваем количество знаков после запятой до 8, чтобы не было "мусора" от Double
         val rounded = bd.setScale(8, java.math.RoundingMode.HALF_UP).stripTrailingZeros()
         rounded.toPlainString()
     } catch (e: Exception) {
